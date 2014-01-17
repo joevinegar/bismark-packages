@@ -3,10 +3,10 @@
 ### giuseppe.aceto@unina.it
 
 client=booid ; # Ash-based BISmark script
-clientver=13 ; # now with more debugging info!
+clientver=14 ; # http get to given IP 
 clientnotes="pktest-bismark" ; # WARN: underscore forbidden XXX
 testname=webcontent
-testver=1.15 ; # fixed nslookup parsing
+testver=1.30 ; # input file format: URL[<\t>IP]
 # defaults
 # NOTE: stuff in persistent_dir will NOT be automatically deleted!
 # NOTE: on error, temp files are NOT deleted
@@ -259,7 +259,8 @@ inputzdata() { zcat $1 |awk '/^##@@## '$2' START$/{p=1;next} /^##@@## '$2' STOP$
 inputdata() {
 	ext=`echo "$1" | sed -e 's/.*\.\([^.]*\)$/\1/'`;
 	if [ "$ext" = "gz" ]; then CAT=zcat; else CAT=cat; fi;
-	$CAT "$1" | sed 's/\r$//' | grep -v "^#" | rnd_pick $maxtargets;
+	#enable version-specific inputs (retrocompatible):
+	$CAT "$1" | sed -e 's/\r$//' -e "s/^##@@## $testname $testver # //" | grep -v "^#" | rnd_pick $maxtargets;
 }
 
 # waits on a PID, no matter if it's a child or not. Min sleep is 1 for posix.
@@ -337,6 +338,7 @@ tcpconnect(){
 
 webcontent(){
 	url="$1"
+	targetip="$2"
 	subshpid=`cut -d" " -f1 /proc/self/stat`
 	if [ $parallel_rnd_wait_max_secs -gt 1 ]; then
 		waitabit=`seq 1 $parallel_rnd_wait_max_secs | rnd_pick 1`
@@ -361,7 +363,7 @@ webcontent(){
 	[ "$port" = "" ] && [ "$proto" = "https" ] && port=443
 	# 8 char from md5sum of url should be enough to differentiate
 	md5urlcut=`echo -n "$url"|md5sum|cut -c 1-8`
-	codedurl="${hostport}_${md5urlcut}"
+	codedurl="${hostport}_${targetip}${md5urlcut}"
 	savedname="${resultspfx}_${codedurl}"
 	resultslog="$savedname".log
 	if [ $use_nslookup -eq 1 ]; then
@@ -376,6 +378,7 @@ webcontent(){
 	echo "##@@##${T}cc${T}$cc" >> "$resultslog"
 	echo "##@@##${T}url${T}$url" >> "$resultslog"
 	echo "##@@##${T}codedurl${T}$codedurl" >> "$resultslog"
+	echo "##@@##${T}targetip${T}$targetip" >> "$resultslog"
 	echo "##@@##${T}start-time${T}$tstry" >> "$resultslog"
 
 	trap '	tsend=`date +%s`
@@ -386,7 +389,7 @@ webcontent(){
 	' INT TERM HUP
 
 	# Resolve hostname
-	if ! isIP4addr $host ; then
+	if [ "$targetip" = "" ] && ! isIP4addr "$host" ; then
 		if [ $use_nslookup -eq 1 ]; then
 			nslookup $host > "$dnsfile" 2>&1
 			resultdns=$?
@@ -524,12 +527,20 @@ if ! [ "$inputfile" = "" ]; then
 		# input file format:
 		# URL
 		printf "%s: processing\t%s\n" "$testname" "$line" >&2
-		printf "%s" "$line" | awk -F"$TAB" '(NF<1)  {exit 1}' || continue;
+		nfields=`printf "%s" "$line" | awk -F"$TAB" '{print NF}'`
+		[ $nfields -ge 1 ] || continue;
 	# ^------------------------------------------------------------------'
-		#targip=`printf "%s" "$line" | cut -d"$TAB" -f1`;
-		url="$line"
+		if [ $nfields -eq 1 ]; then
+			url="$line"
+			targip=""
+		else
+			url=`printf "%s" "$line" | cut -d"$TAB" -f1`;
+			targip=`printf "%s" "$line" | cut -d"$TAB" -f2`;
+			isIP4addr "$targip"  || continue;
+	# ^---------------------------------------------'
+		fi
 
-		webcontent "$url" 2>&1 & last_forked=$!
+		webcontent "$url" "$targip" 2>&1 & last_forked=$!
 		#sweep_subPIDs="$sweep_subPIDs $!"
 		sweep_subPIDs="$last_forked $sweep_subPIDs" ; # checked LIFO
 		tot_subPIDs=$(( tot_subPIDs + 1 ))
