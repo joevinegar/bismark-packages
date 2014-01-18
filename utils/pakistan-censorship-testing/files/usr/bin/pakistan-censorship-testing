@@ -4,7 +4,7 @@
 
 client=booid ; # Ash-based BISmark script
 clientver=14 ; # http get to given IP 
-clientnotes="pktest-bismark" ; # WARN: underscore forbidden XXX
+clientnotes="pktest-bismark-testing" ; # WARN: underscore forbidden XXX
 testname=webcontent
 testver=1.30 ; # input file format: URL[<\t>IP]
 # defaults
@@ -260,7 +260,7 @@ inputdata() {
 	ext=`echo "$1" | sed -e 's/.*\.\([^.]*\)$/\1/'`;
 	if [ "$ext" = "gz" ]; then CAT=zcat; else CAT=cat; fi;
 	#enable version-specific inputs (retrocompatible):
-	$CAT "$1" | sed -e 's/\r$//' -e "s/^##@@## $testname $testver # //" | grep -v "^#" | rnd_pick $maxtargets;
+	$CAT "$1" | sed -e "s/^##@@## $testname $testver # //" -e 's/\r$//' | grep -v "^#" | rnd_pick $maxtargets;
 }
 
 # waits on a PID, no matter if it's a child or not. Min sleep is 1 for posix.
@@ -426,7 +426,12 @@ webcontent(){
 		fi
 		hostip="$dnsfirstip";
 	else
-		hostip="$host";
+		# either an IP is provided, or host is an IP
+		if [ "$targetip" = "" ]; then
+			hostip="$host";
+		else
+			hostip="$targetip";
+		fi
 	fi
 	if [ "$hostip" = "" ]; then
 		result=6 ; # code of curl error "could not resolve address"
@@ -653,7 +658,7 @@ fi
 
 	#send results to server
 	{ echo; echo "Uploading of results to the server..." ; } >&2
-if $CURL --user ftpuser:hobbitftp1 \
+	if $CURL --user ftpuser:hobbitftp1 \
 		--max-time $maximum_service_upload_time \
 		-T $result_test_arch $ftp >&2 ;
 	then echo "Results SUCCESSFULLY uploaded to the server."  >&2
