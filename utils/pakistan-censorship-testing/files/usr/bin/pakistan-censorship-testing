@@ -1,5 +1,5 @@
 ### censorship test
-### (c) Giuseppe Aceto 2013
+### (c) Giuseppe Aceto 2013-2014
 ### giuseppe.aceto@unina.it
 
 client=booid ; # Ash-based BISmark script
@@ -259,7 +259,7 @@ inputzdata() { zcat $1 |awk '/^##@@## '$2' START$/{p=1;next} /^##@@## '$2' STOP$
 inputdata() {
 	ext=`echo "$1" | sed -e 's/.*\.\([^.]*\)$/\1/'`;
 	if [ "$ext" = "gz" ]; then CAT=zcat; else CAT=cat; fi;
-	#enable version-specific inputs (retrocompatible):
+	#enable version-specific inputs (backward -and forward- compatible):
 	$CAT "$1" | sed -e "s/^##@@## $testname $testver # //" -e 's/\r$//' | grep -v "^#" | rnd_pick $maxtargets;
 }
 
