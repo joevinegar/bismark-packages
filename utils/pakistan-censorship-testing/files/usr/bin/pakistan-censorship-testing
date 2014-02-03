@@ -338,7 +338,7 @@ tcpconnect(){
 
 webcontent(){
 	url="$1"
-	targetip="$2"
+	if [ $# -gt 1 ]; then targetip="$2" ; else targetip="" ; fi
 	subshpid=`cut -d" " -f1 /proc/self/stat`
 	if [ $parallel_rnd_wait_max_secs -gt 1 ]; then
 		waitabit=`seq 1 $parallel_rnd_wait_max_secs | rnd_pick 1`
@@ -391,8 +391,12 @@ webcontent(){
 	# Resolve hostname
 	if [ "$targetip" = "" ] && ! isIP4addr "$host" ; then
 		if [ $use_nslookup -eq 1 ]; then
-			nslookup $host > "$dnsfile" 2>&1
-			resultdns=$?
+			if [ ! -e "$dnsfile" ]; then
+				nslookup $host > "$dnsfile" 2>&1
+				resultdns=$?
+			else
+				resultdns=0
+			fi
 			if [ $resultdns -eq 0 ]; then
 				# takes only IPv4 addresses
 				dnsfirstip=`awk '/^Name:/{a=1} /^Address/ && a {if (match($3,":")){next};print $3; exit}' "$dnsfile"`
@@ -406,7 +410,10 @@ webcontent(){
 				printf "%s\tsubprocess %d\turl: %s : ERROR %d from nslookup.\n" "`date`" "$subshpid" "$url" "$resultdns" >&2
 			fi
 			for dserv in `printf "$dnsservers" | rnd_pick`; do
-				nslookup $host $dserv > "${resultspfx}_${host}_${dserv}".nslookupmore 2>&1
+				dnsoutfile="${resultspfx}_${host}_${dserv}".nslookupmore
+				if [ ! -e "$dnsoutfile" ]; then
+					nslookup $host $dserv > "$dnsoutfile" 2>&1
+				fi
 			done
 		else
 			[ ! -e "$dnsfile" ] && $DIG $host > "$dnsfile"
