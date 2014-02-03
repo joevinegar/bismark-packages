@@ -363,7 +363,7 @@ webcontent(){
 	[ "$port" = "" ] && [ "$proto" = "https" ] && port=443
 	# 8 char from md5sum of url should be enough to differentiate
 	md5urlcut=`echo -n "$url"|md5sum|cut -c 1-8`
-	codedurl="${hostport}_${targetip}${md5urlcut}"
+	codedurl="${hostport}_${targetip}-${md5urlcut}"
 	savedname="${resultspfx}_${codedurl}"
 	resultslog="$savedname".log
 	if [ $use_nslookup -eq 1 ]; then
