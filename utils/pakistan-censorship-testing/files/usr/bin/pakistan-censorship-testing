@@ -6,7 +6,7 @@ client=booid ; # Ash-based BISmark script
 clientver=14 ; # http get to given IP 
 clientnotes="pktest-bismark-testing" ; # WARN: underscore forbidden XXX
 testname=webcontent
-testver=1.30 ; # input file format: URL[<\t>IP]
+testver=1.31 ; # saves cookies
 # defaults
 # NOTE: stuff in persistent_dir will NOT be automatically deleted!
 # NOTE: on error, temp files are NOT deleted
@@ -467,7 +467,7 @@ webcontent(){
 			     --connect-timeout $connect_timeout \
 			     --max-time $max_time \
 			     --max-filesize $max_curl_filesize \
-			     -L -k \
+			     -L -k -c ${savedname}.cookiejar\
 			     --url \"${proto}://${hostip}:${port}${path}\" \
 			     -s -w \"\
 ##@@##\\tcurl_url_effective\\t%{url_effective}\\n\
