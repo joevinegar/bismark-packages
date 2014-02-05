@@ -260,7 +260,8 @@ inputdata() {
 	ext=`echo "$1" | sed -e 's/.*\.\([^.]*\)$/\1/'`;
 	if [ "$ext" = "gz" ]; then CAT=zcat; else CAT=cat; fi;
 	#enable version-specific inputs (backward -and forward- compatible):
-	$CAT "$1" | sed -e "s/^##@@## $testname $testver # //" -e 's/\r$//' | grep -v "^#" | rnd_pick $maxtargets;
+	# ^##@@## wecontent 12 99 # www.example.com 192.0.2.2
+	$CAT "$1" | awk -v tname=$testname -v tver=$testver '/^##@@##/ && ($2==tname)&&(tver>=$3)&&(tver<=$4){sub(/^#.*#[[:blank:]]*/,"");}1' |sed -e 's/\r$//' | grep -v "^#" | rnd_pick $maxtargets;
 }
 
 # waits on a PID, no matter if it's a child or not. Min sleep is 1 for posix.
